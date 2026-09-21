@@ -6,20 +6,10 @@ const API = {
   getBaseUrl() {
     if (typeof window !== 'undefined') {
       if (window.location.protocol === 'file:') {
-        return 'http://localhost:5000/api';
+        return 'http://localhost:8000/api';
       }
-      // When served from the same Node.js server (any host/port), use relative /api
-      if (window.location.port === '5000') {
-        return '/api';
-      }
-      const host = window.location.hostname || 'localhost';
-      // For local/LAN development, point to port 5000
-      if (host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.') || host.startsWith('10.')) {
-        return `http://${host}:5000/api`;
-      }
-      // For live/production servers (any domain), use relative path
-      // This works when Node.js serves both static files and API on the same origin
-      return `${window.location.origin}/api`;
+      // Use relative /api when served via web server (BigRock Apache or local PHP server)
+      return '/api';
     }
     return '/api';
   },

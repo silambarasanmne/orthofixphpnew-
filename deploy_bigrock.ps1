@@ -1,5 +1,5 @@
 param (
-    [string]$FtpHost = "orthofixspecialityclinic.info",
+    [string]$FtpHost = "orthofixspecialityclinic.com",
     [string]$Username = "agamtwb@gmail.com",
     [string]$Password = "Agamtwb@2026",
     [string]$RemoteDir = "public_html"

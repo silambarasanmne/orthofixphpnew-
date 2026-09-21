@@ -19,11 +19,17 @@ $routes = [
     '/' => '/login.html',
     '/login' => '/login.html',
     '/billing' => '/billing.html',
+    '/billing-manager' => '/billing-manager.html',
     '/dashboard' => '/dashboard.html',
     '/medicines' => '/medicines.html',
     '/history' => '/history.html',
     '/reports' => '/reports.html',
     '/users' => '/users.html',
+    '/doctor' => '/doctor.html',
+    '/patients' => '/patients.html',
+    '/superadmin' => '/superadmin.html',
+    '/register' => '/register.html',
+    '/setup' => '/setup.php',
 ];
 
 if (isset($routes[$uri])) {
