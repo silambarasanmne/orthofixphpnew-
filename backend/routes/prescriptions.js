@@ -112,8 +112,8 @@ router.post('/', authenticateToken, requireRole('Doctor', 'Medical Manager', 'Ad
     // 2. Insert Prescription Items if any
     if (safeItems.length > 0) {
       const insertItem = db.prepare(`
-        INSERT INTO prescription_items (prescription_id, medicine_id, medicine_name, quantity, instructions)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO prescription_items (prescription_id, medicine_id, medicine_name, quantity, instructions, days, timing)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
 
       let fallbackMed = db.prepare('SELECT id FROM medicines ORDER BY id ASC LIMIT 1').get();
@@ -143,7 +143,9 @@ router.post('/', authenticateToken, requireRole('Doctor', 'Medical Manager', 'Ad
           validMedId || fallbackMedId,
           item.medicine_name || 'General Medicine',
           item.quantity || 1,
-          item.instructions || ''
+          item.instructions || '',
+          item.days || 1,
+          item.timing || ''
         );
       }
     }

@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const consultPatientAge = document.getElementById('consultPatientAge');
     const consultPatientMobile = document.getElementById('consultPatientMobile');
     const consultPatientToken = document.getElementById('consultPatientToken');
+    const consultPatientDate = document.getElementById('consultPatientDate');
     const consultPatientIssues = document.getElementById('consultPatientIssues');
     const consultDoctorComment = document.getElementById('consultDoctorComment');
 
@@ -70,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadInventory() {
         try {
             const res = await apiRequest('/medicines?limit=500');
-            if (res && res.success) {
+            if (res && res.success && Array.isArray(res.medicines)) {
                 inventoryMedicines = res.medicines;
 
                 let datalist = document.getElementById('med-datalist');
@@ -80,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.body.appendChild(datalist);
                 }
                 datalist.innerHTML = inventoryMedicines.map(m => {
-                    const genericStr = m.generic_name ? ` (${escapeHtml(m.generic_name)})` : '';
+                    const genericStr = (m.generic_name && m.generic_name.toLowerCase() !== m.name.toLowerCase()) ? ` (${escapeHtml(m.generic_name)})` : '';
                     return `<option value="${escapeHtml(m.name)}${genericStr} - #${m.id}">Stock: ${m.current_stock || 0}</option>`;
                 }).join('');
             }
@@ -92,34 +93,58 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Primary Search Logic ---
     async function performPrimarySearch() {
-        const val = primarySearchInput ? primarySearchInput.value.trim() : '';
-        if (!val) {
-            Toast.error("Please enter a Token # or Mobile Number");
+        const rawVal = primarySearchInput ? primarySearchInput.value.trim() : '';
+        if (!rawVal) {
+            Toast.error("Please enter a Token #, Mobile Number, or Patient Name");
             return;
         }
+
+        // Clean input: remove leading # or "token" text if present
+        const cleanVal = rawVal.replace(/^#/, '').replace(/^token\s*#?/i, '').trim();
 
         if (consultationLoadingOverlay) consultationLoadingOverlay.classList.remove('hidden');
 
         try {
-            // First try to fetch by token
-            let res = await PatientAPI.getPatientByToken(val);
+            let patientData = null;
 
-            if (!res.success) {
-                // Fallback to search query if token fetch failed (e.g. searching by mobile or name)
-                const searchRes = await PatientAPI.getPatients({ search: val, limit: 1 });
-                if (searchRes.success && searchRes.data.length > 0) {
-                    res = { success: true, data: searchRes.data[0] };
+            // 1. If it's a numeric token (e.g. "1", "12"), try token lookup first
+            if (/^\d+$/.test(cleanVal)) {
+                try {
+                    const tokenRes = await PatientAPI.getPatientByToken(cleanVal);
+                    if (tokenRes && tokenRes.success && tokenRes.data) {
+                        patientData = tokenRes.data;
+                    }
+                } catch (e) {
+                    // Token API returned 404 or error, fall through to general search
                 }
             }
 
-            if (res.success && res.data) {
-                activeConsultPatient = res.data;
-                if (consultPatientName) consultPatientName.value = res.data.patient_name || '';
-                if (consultPatientAge) consultPatientAge.value = res.data.age ? `${res.data.age} Years` : '';
-                if (consultPatientMobile) consultPatientMobile.value = res.data.mobile || '';
-                if (consultPatientToken) consultPatientToken.value = `#${res.data.token}`;
-                if (consultPatientIssues) consultPatientIssues.value = res.data.symptoms || 'No issues reported.';
-                if (consultDoctorComment) consultDoctorComment.value = res.data.doctor_comment || '';
+            // 2. If token lookup didn't find patient or search term is mobile/name/alphanumeric, perform general patient search
+            if (!patientData) {
+                try {
+                    const searchRes = await PatientAPI.getPatients({ search: cleanVal, limit: 1 });
+                    if (searchRes && searchRes.success && Array.isArray(searchRes.data) && searchRes.data.length > 0) {
+                        patientData = searchRes.data[0];
+                    }
+                } catch (e) {
+                    // General search failed
+                }
+            }
+
+            if (patientData) {
+                activeConsultPatient = patientData;
+                if (consultPatientName) consultPatientName.value = patientData.patient_name || '';
+                if (consultPatientAge) consultPatientAge.value = patientData.age ? `${patientData.age} Years` : '';
+                if (consultPatientMobile) consultPatientMobile.value = patientData.mobile || '';
+                if (consultPatientToken) consultPatientToken.value = `#${patientData.token}`;
+                if (consultPatientDate) {
+                    const regDate = patientData.created_at ? new Date(patientData.created_at).toLocaleDateString('en-IN', {
+                        day: '2-digit', month: 'short', year: 'numeric'
+                    }) : '';
+                    consultPatientDate.value = regDate;
+                }
+                if (consultPatientIssues) consultPatientIssues.value = patientData.symptoms || 'No issues reported.';
+                if (consultDoctorComment) consultDoctorComment.value = patientData.doctor_comment || '';
 
                 // Clear existing prescription rows
                 if (prescriptionTableBody) {
@@ -128,14 +153,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Check if there is an existing pending prescription for this patient token
                 try {
-                    const prescRes = await apiRequest(`/prescriptions/patient/${res.data.token}`);
+                    const prescRes = await apiRequest(`/prescriptions/patient/${patientData.token}`);
                     if (prescRes && prescRes.success && prescRes.prescription) {
                         if (consultDoctorComment && prescRes.prescription.doctor_comment) {
                             consultDoctorComment.value = prescRes.prescription.doctor_comment;
                         }
                         if (prescRes.prescription.items && prescRes.prescription.items.length > 0) {
                             prescRes.prescription.items.forEach(item => {
-                                addPrescriptionRow(item.medicine_id, item.quantity, item.instructions);
+                                addPrescriptionRow(item.medicine_id, item.quantity, item.instructions, item.medicine_name);
                             });
                         } else {
                             addPrescriptionRow();
@@ -147,13 +172,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     addPrescriptionRow();
                 }
 
-                Toast.success('Patient record loaded into Patient Information panel');
+                Toast.success(`Patient #${patientData.token} (${patientData.patient_name}) loaded`);
 
                 if (consultationFormContainer) {
                     consultationFormContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
             } else {
-                Toast.error('No patient found with this Token or Mobile Number');
+                Toast.error(`No patient found for "${rawVal}"`);
             }
         } catch (e) {
             console.error('Error during primary search:', e);
@@ -178,35 +203,110 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function addPrescriptionRow(medId = '', qty = 1, instruction = '') {
+    function addPrescriptionRow(medId = '', qty = 0, instruction = '', medName = '', days = 3) {
         if (!prescriptionTableBody) return;
         rowIdCounter++;
         const rowId = rowIdCounter;
         const tr = document.createElement('tr');
         tr.id = `presc-row-${rowId}`;
-        tr.className = 'border-b border-slate-700/50 hover:bg-slate-800/60 transition-colors';
+        tr.className = 'border-b border-slate-700/50 hover:bg-slate-800/40 transition-colors';
 
         let initialMedValue = '';
         if (medId) {
-            const m = inventoryMedicines.find(x => x.id === parseInt(medId));
-            if (m) initialMedValue = `${m.name} (${m.generic_name}) - #${m.id}`;
+            const m = inventoryMedicines.find(x => Number(x.id) === Number(medId));
+            if (m) {
+                const genericStr = (m.generic_name && m.generic_name.toLowerCase() !== m.name.toLowerCase()) ? ` (${m.generic_name})` : '';
+                initialMedValue = `${m.name}${genericStr} - #${m.id}`;
+            } else if (medName) {
+                initialMedValue = `${medName} - #${medId}`;
+            } else {
+                initialMedValue = `#${medId}`;
+            }
+        } else if (medName) {
+            initialMedValue = medName;
+        }
+
+        // Parse defaults from instruction if provided
+        let parsedDays = days || 3;
+        let parsedFreq = '1-0-1';
+        let parsedFood = 'After Food';
+
+        if (instruction) {
+            const dMatch = instruction.match(/(\d+)\s*Days?/i);
+            if (dMatch) parsedDays = parseInt(dMatch[1], 10);
+
+            if (instruction.includes('Apply 3 Times/Day')) parsedFreq = 'Apply 3 Times/Day';
+            else if (instruction.includes('Apply 2 Times/Day')) parsedFreq = 'Apply 2 Times/Day';
+            else if (instruction.includes('Apply Once Daily')) parsedFreq = 'Apply Once Daily';
+            else if (instruction.includes('Apply on Affected Area') || instruction.includes('Apply Gently')) parsedFreq = 'Apply on Affected Area';
+            else if (instruction.includes('1-1-1-1')) parsedFreq = '1-1-1-1';
+            else if (instruction.includes('1-1-1') || instruction.toLowerCase().includes('3 times')) parsedFreq = '1-1-1';
+            else if (instruction.includes('1-0-1') || instruction.toLowerCase().includes('mrng & evng')) parsedFreq = '1-0-1';
+            else if (instruction.includes('1-0-0')) parsedFreq = '1-0-0';
+            else if (instruction.includes('0-1-0')) parsedFreq = '0-1-0';
+            else if (instruction.includes('0-0-1')) parsedFreq = '0-0-1';
+            else if (instruction.includes('SOS')) parsedFreq = 'SOS';
+
+            if (instruction.includes('External Application')) parsedFood = 'External Application';
+            else if (instruction.includes('Apply on Affected Area')) parsedFood = 'Apply on Affected Area';
+            else if (instruction.includes('Local Application Only')) parsedFood = 'Local Application Only';
+            else if (instruction.includes('Before Food')) parsedFood = 'Before Food';
+            else if (instruction.includes('With Food')) parsedFood = 'With Food';
+            else if (instruction.includes('After Food')) parsedFood = 'After Food';
         }
 
         tr.innerHTML = `
-      <td class="p-2 align-middle">
-        <input type="text" list="med-datalist" value="${escapeHtml(initialMedValue)}" placeholder="Type to search medicine..." class="med-search-input form-input w-full px-2 py-1.5 rounded-lg text-xs bg-slate-900 border border-slate-700 text-slate-100 focus:ring-teal-500">
+      <td class="p-2 align-top">
+        <input type="text" list="med-datalist" value="${escapeHtml(initialMedValue)}" placeholder="Type medicine name..." class="med-search-input form-input w-full px-2 py-1.5 rounded-lg text-xs bg-slate-900 border border-slate-700 text-slate-100 focus:ring-1 focus:ring-teal-500">
       </td>
-      <td class="p-2 align-middle text-center">
-        <input type="number" min="1" value="${qty}" class="qty-input form-input w-20 px-2 py-1.5 rounded-lg text-xs text-center bg-slate-900 border border-slate-700 text-slate-100 focus:ring-teal-500 mx-auto">
+      <td class="p-2 align-top">
+        <div class="flex flex-col gap-1">
+          <select class="freq-select form-input w-full px-1.5 py-1 rounded text-[11px] bg-slate-900 border border-slate-700 text-teal-300 font-medium focus:ring-1 focus:ring-teal-500">
+            <optgroup label="Oral / Tablets">
+              <option value="1-0-1" data-count="2" ${parsedFreq === '1-0-1' ? 'selected' : ''}>1-0-1 (Morning & Evening - 2x/day)</option>
+              <option value="1-1-1" data-count="3" ${parsedFreq === '1-1-1' ? 'selected' : ''}>1-1-1 (3 Times in Day - Mrng, Aftn, Evng)</option>
+              <option value="1-0-0" data-count="1" ${parsedFreq === '1-0-0' ? 'selected' : ''}>1-0-0 (Morning Only - 1x/day)</option>
+              <option value="0-1-0" data-count="1" ${parsedFreq === '0-1-0' ? 'selected' : ''}>0-1-0 (Afternoon Only - 1x/day)</option>
+              <option value="0-0-1" data-count="1" ${parsedFreq === '0-0-1' ? 'selected' : ''}>0-0-1 (Night Only - 1x/day)</option>
+              <option value="1-0-1-1" data-count="3" ${parsedFreq === '1-0-1-1' ? 'selected' : ''}>1-0-1-1 (Mrng, Evng & Night - 3x/day)</option>
+              <option value="1-1-1-1" data-count="4" ${parsedFreq === '1-1-1-1' ? 'selected' : ''}>1-1-1-1 (4 Times a Day)</option>
+            </optgroup>
+            <optgroup label="Ointment / Cream / Topical">
+              <option value="Apply 2 Times/Day" data-count="1" ${parsedFreq === 'Apply 2 Times/Day' ? 'selected' : ''}>Apply 2 Times/Day (Mrng & Night)</option>
+              <option value="Apply 3 Times/Day" data-count="1" ${parsedFreq === 'Apply 3 Times/Day' ? 'selected' : ''}>Apply 3 Times/Day (Mrng, Aftn, Evng)</option>
+              <option value="Apply Once Daily" data-count="1" ${parsedFreq === 'Apply Once Daily' ? 'selected' : ''}>Apply Once Daily (Night/Bedtime)</option>
+              <option value="Apply on Affected Area" data-count="1" ${parsedFreq === 'Apply on Affected Area' ? 'selected' : ''}>Apply Gently on Affected Area</option>
+            </optgroup>
+            <optgroup label="General / SOS">
+              <option value="SOS" data-count="1" ${parsedFreq === 'SOS' ? 'selected' : ''}>SOS (As Needed)</option>
+            </optgroup>
+          </select>
+          <div class="flex items-center gap-1">
+            <button type="button" data-pill="M" class="timing-pill flex-1 py-0.5 text-[10px] font-bold rounded border transition-colors" title="Morning">M</button>
+            <button type="button" data-pill="A" class="timing-pill flex-1 py-0.5 text-[10px] font-bold rounded border transition-colors" title="Afternoon">A</button>
+            <button type="button" data-pill="E" class="timing-pill flex-1 py-0.5 text-[10px] font-bold rounded border transition-colors" title="Evening">E</button>
+            <button type="button" data-pill="N" class="timing-pill flex-1 py-0.5 text-[10px] font-bold rounded border transition-colors" title="Night">N</button>
+          </div>
+        </div>
       </td>
-      <td class="p-2 align-middle text-center">
-        <select class="inst-select form-input w-full px-2 py-1.5 rounded-lg text-xs bg-slate-900 border border-slate-700 text-slate-100 focus:ring-teal-500">
-          <option value="After Food" ${instruction === 'After Food' ? 'selected' : ''}>After Food</option>
-          <option value="Before Food" ${instruction === 'Before Food' ? 'selected' : ''}>Before Food</option>
+      <td class="p-2 align-top text-center">
+        <input type="number" min="1" max="180" value="${parsedDays}" class="days-input form-input w-12 px-1 py-1 rounded text-xs text-center font-bold bg-slate-900 border border-slate-700 text-amber-300 focus:ring-1 focus:ring-teal-500 mx-auto">
+      </td>
+      <td class="p-2 align-top">
+        <select class="food-select form-input w-full px-1.5 py-1 rounded text-[11px] bg-slate-900 border border-slate-700 text-slate-200 focus:ring-1 focus:ring-teal-500">
+          <option value="After Food" ${parsedFood === 'After Food' ? 'selected' : ''}>After Food</option>
+          <option value="Before Food" ${parsedFood === 'Before Food' ? 'selected' : ''}>Before Food</option>
+          <option value="With Food" ${parsedFood === 'With Food' ? 'selected' : ''}>With Food</option>
+          <option value="External Application" ${parsedFood === 'External Application' ? 'selected' : ''}>External Application (Ointment/Cream)</option>
+          <option value="Apply on Affected Area" ${parsedFood === 'Apply on Affected Area' ? 'selected' : ''}>Apply on Affected Area</option>
+          <option value="Local Application Only" ${parsedFood === 'Local Application Only' ? 'selected' : ''}>Local Application Only</option>
         </select>
       </td>
-      <td class="p-2 align-middle text-center">
-        <button type="button" class="btn-remove-row text-red-400 hover:text-red-300 p-1.5 hover:bg-slate-800 rounded-lg transition-colors" title="Remove Row">
+      <td class="p-2 align-top text-center">
+        <input type="number" min="1" value="${qty || 1}" class="qty-input form-input w-14 px-1 py-1 rounded text-xs text-center font-bold bg-slate-900 border border-slate-700 text-emerald-300 focus:ring-1 focus:ring-teal-500 mx-auto">
+      </td>
+      <td class="p-2 align-top text-center">
+        <button type="button" class="btn-remove-row text-red-400 hover:text-red-300 p-1 hover:bg-slate-800 rounded transition-colors" title="Remove Row">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
         </button>
       </td>
@@ -219,8 +319,134 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Auto add next row when medicine is selected/entered in the last row
+        const freqSelect = tr.querySelector('.freq-select');
+        const foodSelect = tr.querySelector('.food-select');
+        const daysInput = tr.querySelector('.days-input');
+        const qtyInput = tr.querySelector('.qty-input');
+        const pillBtns = tr.querySelectorAll('.timing-pill');
         const medInput = tr.querySelector('.med-search-input');
+        let isManualQtyOverride = false;
+
+        const isOintmentOrTopical = () => {
+            const fVal = freqSelect ? freqSelect.value : '';
+            const foodVal = foodSelect ? foodSelect.value : '';
+            return fVal.startsWith('Apply') || foodVal.includes('External') || foodVal.includes('Affected Area') || foodVal.includes('Local Application');
+        };
+
+        const syncPillsFromFreq = (freqCode) => {
+            const map = {
+                '1-0-1': ['M', 'E'],
+                '1-1-1': ['M', 'A', 'E'],
+                '1-0-0': ['M'],
+                '0-1-0': ['A'],
+                '0-0-1': ['N'],
+                '1-0-1-1': ['M', 'E', 'N'],
+                '1-1-1-1': ['M', 'A', 'E', 'N'],
+                'Apply 2 Times/Day': ['M', 'E'],
+                'Apply 3 Times/Day': ['M', 'A', 'E'],
+                'Apply Once Daily': ['N'],
+                'Apply on Affected Area': ['M', 'E'],
+                'SOS': ['M']
+            };
+            const activePills = map[freqCode] || ['M', 'E'];
+            pillBtns.forEach(btn => {
+                const code = btn.getAttribute('data-pill');
+                if (activePills.includes(code)) {
+                    btn.className = 'timing-pill flex-1 py-0.5 text-[10px] font-bold rounded border border-teal-500 bg-teal-500/20 text-teal-300 shadow-sm';
+                } else {
+                    btn.className = 'timing-pill flex-1 py-0.5 text-[10px] font-bold rounded border border-slate-700 bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors';
+                }
+            });
+        };
+
+        const recalculateQty = () => {
+            if (isOintmentOrTopical()) {
+                if (!isManualQtyOverride) {
+                    qtyInput.value = 1; // Default 1 Tube/Unit for Ointments & Creams
+                }
+                return;
+            }
+
+            let timesPerDay = 2;
+            const activePillElements = Array.from(pillBtns).filter(btn => btn.classList.contains('bg-teal-500/20'));
+            if (activePillElements.length > 0) {
+                timesPerDay = activePillElements.length;
+            } else if (freqSelect) {
+                const opt = freqSelect.options[freqSelect.selectedIndex];
+                timesPerDay = opt ? parseInt(opt.getAttribute('data-count') || '2', 10) : 2;
+            }
+
+            const d = parseInt(daysInput.value, 10) || 1;
+            const computedQty = timesPerDay * d;
+            if (!isManualQtyOverride) {
+                qtyInput.value = computedQty;
+            }
+        };
+
+        const detectMedicineType = () => {
+            const val = medInput.value.trim().toLowerCase();
+            if (!val) return;
+
+            const isTopical = /ointment|cream|gel|lotion|topical|balm|liniment|rub|tube/i.test(val);
+            if (isTopical) {
+                if (foodSelect) foodSelect.value = 'External Application';
+                if (freqSelect) freqSelect.value = 'Apply 2 Times/Day';
+                syncPillsFromFreq('Apply 2 Times/Day');
+                isManualQtyOverride = false;
+                recalculateQty();
+            }
+        };
+
+        syncPillsFromFreq(parsedFreq);
+        if (!qty) {
+            recalculateQty();
+        }
+
+        freqSelect.addEventListener('change', () => {
+            syncPillsFromFreq(freqSelect.value);
+            isManualQtyOverride = false;
+            recalculateQty();
+        });
+
+        foodSelect.addEventListener('change', () => {
+            isManualQtyOverride = false;
+            recalculateQty();
+        });
+
+        pillBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const isCurrentlyActive = btn.classList.contains('bg-teal-500/20');
+                if (isCurrentlyActive) {
+                    btn.className = 'timing-pill flex-1 py-0.5 text-[10px] font-bold rounded border border-slate-700 bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors';
+                } else {
+                    btn.className = 'timing-pill flex-1 py-0.5 text-[10px] font-bold rounded border border-teal-500 bg-teal-500/20 text-teal-300 shadow-sm';
+                }
+
+                const activeCodes = Array.from(pillBtns).filter(b => b.classList.contains('bg-teal-500/20')).map(b => b.getAttribute('data-pill'));
+                let matchedFreq = '1-0-1';
+                if (activeCodes.length === 3 && activeCodes.includes('M') && activeCodes.includes('A') && activeCodes.includes('E')) matchedFreq = '1-1-1';
+                else if (activeCodes.length === 2 && activeCodes.includes('M') && activeCodes.includes('E')) matchedFreq = '1-0-1';
+                else if (activeCodes.length === 1 && activeCodes.includes('M')) matchedFreq = '1-0-0';
+                else if (activeCodes.length === 1 && activeCodes.includes('A')) matchedFreq = '0-1-0';
+                else if (activeCodes.length === 1 && activeCodes.includes('N')) matchedFreq = '0-0-1';
+                else if (activeCodes.length === 4) matchedFreq = '1-1-1-1';
+
+                freqSelect.value = matchedFreq;
+                isManualQtyOverride = false;
+                recalculateQty();
+            });
+        });
+
+        daysInput.addEventListener('input', () => {
+            isManualQtyOverride = false;
+            recalculateQty();
+        });
+
+        qtyInput.addEventListener('input', () => {
+            isManualQtyOverride = true;
+        });
+
+        // Auto add next row when medicine is selected/entered in the last row
         const autoAddNextRow = () => {
             const isLast = (tr === prescriptionTableBody.lastElementChild);
             if (isLast && medInput.value.trim() !== '') {
@@ -228,9 +454,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        medInput.addEventListener('change', autoAddNextRow);
+        medInput.addEventListener('change', () => {
+            detectMedicineType();
+            autoAddNextRow();
+        });
+
         medInput.addEventListener('blur', autoAddNextRow);
         medInput.addEventListener('input', () => {
+            detectMedicineType();
             if (medInput.value.includes('- #')) {
                 autoAddNextRow();
             }
@@ -242,7 +473,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.preventDefault();
                 addPrescriptionRow();
 
-                // Focus the newly added row's medicine input
                 setTimeout(() => {
                     const lastRow = prescriptionTableBody.lastElementChild;
                     if (lastRow) {
@@ -303,8 +533,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const items = [];
             rows.forEach(tr => {
                 const searchInput = tr.querySelector('.med-search-input');
+                const freqSelect = tr.querySelector('.freq-select');
+                const daysInput = tr.querySelector('.days-input');
+                const foodSelect = tr.querySelector('.food-select');
                 const qtyInput = tr.querySelector('.qty-input');
-                const instSelect = tr.querySelector('.inst-select');
+                const pillBtns = tr.querySelectorAll('.timing-pill');
 
                 if (!searchInput || !qtyInput) return;
 
@@ -326,15 +559,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                const qty = parseInt(qtyInput.value, 10);
-                const instruction = instSelect ? instSelect.value : 'After Food';
+                const qty = parseInt(qtyInput.value, 10) || 1;
+                const days = parseInt(daysInput ? daysInput.value : '3', 10) || 1;
+                const freqCode = freqSelect ? freqSelect.value : '1-0-1';
+                const foodVal = foodSelect ? foodSelect.value : 'After Food';
+
+                let fullInstruction = '';
+                if (freqCode.startsWith('Apply') || foodVal.includes('External') || foodVal.includes('Affected Area') || foodVal.includes('Local Application')) {
+                    fullInstruction = `${days} Days | ${freqCode} | ${foodVal}`;
+                } else {
+                    const activePillElements = Array.from(pillBtns || []).filter(b => b.classList.contains('bg-teal-500/20')).map(b => b.getAttribute('data-pill'));
+                    const pillLabels = { 'M': 'Morning', 'A': 'Afternoon', 'E': 'Evening', 'N': 'Night' };
+                    const timingStr = activePillElements.length > 0 ? activePillElements.map(p => pillLabels[p]).join(', ') : 'Morning & Evening';
+                    fullInstruction = `${days} Days | ${timingStr} (${freqCode}) | ${foodVal}`;
+                }
 
                 if (medName && qty > 0) {
                     items.push({
                         medicine_id: medId ? parseInt(medId, 10) : null,
                         medicine_name: medName,
                         quantity: qty,
-                        instructions: instruction
+                        instructions: fullInstruction,
+                        days: days,
+                        timing: freqCode,
+                        frequency: freqCode
                     });
                 }
             });

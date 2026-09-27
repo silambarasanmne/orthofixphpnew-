@@ -206,6 +206,9 @@ function initDb() {
       FOREIGN KEY (medicine_id) REFERENCES medicines(id)
     );
   `);
+  try { db.exec("ALTER TABLE prescription_items ADD COLUMN days INTEGER DEFAULT 1;"); } catch(e) {}
+  try { db.exec("ALTER TABLE prescription_items ADD COLUMN timing TEXT DEFAULT '';"); } catch(e) {}
+
 
   // 9. Audit Logs Table
   db.exec(`
