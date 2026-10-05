@@ -1119,30 +1119,30 @@ const Medicines = {
 
       return `
         <tr class="hover:bg-slate-50 border-b border-slate-100">
-          <td class="p-3.5 font-bold text-slate-500">#${m.id}</td>
-          <td class="p-3.5">
+          <td class="px-2 py-2 font-bold text-slate-500">#${m.id}</td>
+          <td class="px-2 py-2">
             <span class="font-extrabold text-slate-900 block">${this.escapeHtml(m.name)}</span>
             <span class="text-[11px] text-slate-500">${this.escapeHtml(m.generic_name)}</span>
           </td>
-          <td class="p-3.5">
-            <span class="font-bold text-emerald-800 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200 text-xs block truncate max-w-[160px]" title="${this.escapeHtml(m.vendor_name || 'Unassigned')}">
+          <td class="px-2 py-2">
+            <span class="font-bold text-emerald-800 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200 text-xs block truncate max-w-[120px]" title="${this.escapeHtml(m.vendor_name || 'Unassigned')}">
               🏬 ${this.escapeHtml(m.vendor_name || 'Unassigned Vendor')}
             </span>
           </td>
-          <td class="p-3.5"><span class="px-2 py-0.5 bg-slate-100 text-slate-700 font-bold rounded-md text-[10px]">${this.escapeHtml(m.category)}</span></td>
-          <td class="p-3.5 font-mono text-slate-700 font-bold">${this.escapeHtml(m.batch_number)}</td>
-          <td class="p-3.5 font-semibold ${m.is_expired ? 'text-rose-600 font-bold' : 'text-slate-600'}">${m.expiry_date}</td>
-          <td class="p-3.5 text-right font-semibold text-slate-700">₹${Number(m.purchase_price).toFixed(2)}</td>
-          <td class="p-3.5 text-right font-bold text-slate-800">₹${Number(m.selling_price).toFixed(2)}</td>
-          <td class="p-3.5 text-right font-black text-emerald-700">
-            ₹${((Number(m.selling_price) || 0) / (m.units_per_strip || 10)).toFixed(2)} <span class="text-[10px] text-emerald-600 font-normal">/ tab</span>
+          <td class="px-2 py-2"><span class="px-2 py-0.5 bg-slate-100 text-slate-700 font-bold rounded-md text-[10px]">${this.escapeHtml(m.category)}</span></td>
+          <td class="px-2 py-2 font-mono text-slate-700 font-bold">${this.escapeHtml(m.batch_number)}</td>
+          <td class="px-2 py-2 font-semibold ${m.is_expired ? 'text-rose-600 font-bold' : 'text-slate-600'}">${m.expiry_date}</td>
+          <td class="px-2 py-2 text-right font-semibold text-slate-700">₹${Number(m.purchase_price).toFixed(2)}</td>
+          <td class="px-2 py-2 text-right font-bold text-slate-800">₹${Number(m.selling_price).toFixed(2)}</td>
+          <td class="px-2 py-2 text-right font-black text-emerald-700">
+            ₹${((Number(m.selling_price) || 0) / (m.units_per_strip || 10)).toFixed(2)}
           </td>
-          <td class="p-3.5 text-center font-bold text-slate-800 text-xs">
-            ${m.units_per_strip || 10} tabs/strip
+          <td class="px-2 py-2 text-center font-bold text-slate-800 text-xs">
+            ${m.units_per_strip || 10}
           </td>
-          <td class="p-3.5 text-center font-black text-slate-900 text-sm">${m.current_stock}</td>
-          <td class="p-3.5 text-center">${statusBadge}</td>
-          <td class="p-3.5 text-center">
+          <td class="px-2 py-2 text-center font-black text-slate-900 text-sm">${m.current_stock}</td>
+          <td class="px-2 py-2 text-center">${statusBadge}</td>
+          <td class="px-2 py-2 text-center">
             <div class="flex items-center justify-center gap-1">
               <button onclick="Medicines.openStockModal(${m.id})" title="Adjust Stock" class="p-1.5 text-sky-600 hover:bg-sky-50 rounded-lg transition-colors cursor-pointer">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
@@ -1264,7 +1264,7 @@ const Medicines = {
       const changeQty = document.getElementById('stock-change-qty').value;
       const reason = document.getElementById('stock-reason').value;
 
-      const res = await API.post(`/medicines/${id}/adjust-stock`, {
+      const res = await API.post(`/medicines/${id}/stock`, {
         change_quantity: parseInt(changeQty, 10),
         reason
       });

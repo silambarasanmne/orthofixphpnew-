@@ -156,12 +156,12 @@
         </button>
       </div>
 
-      <main class="content-body flex-grow p-6 overflow-y-auto">
+      <main class="content-body flex-grow p-4 overflow-hidden flex flex-col">
 
         <!-- SECTION 1: MEDICINE STOCK REGISTER -->
-        <div id="med-section-register" class="tab-section">
-          <div class="table-card bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
-            <div class="table-header-bar p-5 border-b border-slate-200/80 flex flex-wrap justify-between items-center gap-4 bg-slate-50/50">
+        <div id="med-section-register" class="tab-section flex-grow flex flex-col h-full overflow-hidden">
+          <div class="table-card bg-white border border-slate-200/80 rounded-2xl shadow-sm flex-grow flex flex-col overflow-hidden">
+            <div class="table-header-bar p-4 border-b border-slate-200/80 flex flex-wrap justify-between items-center gap-4 bg-slate-50/50 flex-shrink-0">
               <div class="table-header-title">
                 <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
                   <svg class="w-5 h-5 text-sky-600 inline-block align-middle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg> Pharmacy Stock Register
@@ -170,12 +170,12 @@
               <div class="table-controls flex flex-wrap items-center gap-3">
                 <div class="relative">
                   <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                  <input type="text" id="med-search-input" class="select-filter pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 outline-none focus:border-sky-600 focus:ring-2 focus:ring-sky-600/10 w-64" placeholder="Search medicine, generic, barcode...">
+                  <input type="text" id="med-search-input" class="select-filter pl-9 pr-4 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 outline-none focus:border-sky-600 focus:ring-2 focus:ring-sky-600/10 w-64" placeholder="Search medicine, generic, barcode...">
                 </div>
-                <select id="med-filter-category" class="select-filter px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none cursor-pointer">
+                <select id="med-filter-category" class="select-filter px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none cursor-pointer">
                   <option value="All">All Categories</option>
                 </select>
-                <select id="med-filter-status" class="select-filter px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none cursor-pointer">
+                <select id="med-filter-status" class="select-filter px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none cursor-pointer">
                   <option value="">All Statuses</option>
                   <option value="in_stock">In Stock</option>
                   <option value="low_stock">Low Stock</option>
@@ -184,30 +184,30 @@
                   <option value="expiring_90">Expiring in 90 Days</option>
                   <option value="expired">Expired</option>
                 </select>
-                <button class="btn px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 flex items-center gap-1.5 transition-all cursor-pointer" onclick="Medicines.openImportModal()">
+                <button class="btn px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 flex items-center gap-1.5 transition-all cursor-pointer" onclick="Medicines.openImportModal()">
                   <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
                   📊 Excel Upload Stock
                 </button>
               </div>
             </div>
 
-            <div class="overflow-x-auto">
+            <div class="flex-grow overflow-x-auto overflow-y-auto">
               <table class="data-table w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr class="bg-slate-100/70 border-b border-slate-200 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
-                    <th class="p-3.5">ID</th>
-                    <th class="p-3.5">Medicine Name & Generic</th>
-                    <th class="p-3.5">Linked Vendor Firm</th>
-                    <th class="p-3.5">Category</th>
-                    <th class="p-3.5">Batch #</th>
-                    <th class="p-3.5">Expiry</th>
-                    <th class="p-3.5 text-right">Purchase Price</th>
-                    <th class="p-3.5 text-right">Strip Selling Price</th>
-                    <th class="p-3.5 text-right">Tablet Unit Price</th>
-                    <th class="p-3.5 text-center">Pack / Strip Size</th>
-                    <th class="p-3.5 text-center">Current Stock</th>
-                    <th class="p-3.5 text-center">Status</th>
-                    <th class="p-3.5 text-center">Actions</th>
+                <thead class="sticky top-0 bg-slate-100/95 backdrop-blur-sm z-10 shadow-sm">
+                  <tr class="border-b border-slate-200 text-[10px] font-extrabold text-slate-500 uppercase tracking-normal">
+                    <th class="px-2 py-2">ID</th>
+                    <th class="px-2 py-2">Medicine & Generic</th>
+                    <th class="px-2 py-2">Vendor</th>
+                    <th class="px-2 py-2">Category</th>
+                    <th class="px-2 py-2">Batch #</th>
+                    <th class="px-2 py-2">Expiry</th>
+                    <th class="px-2 py-2 text-right">Purch. Price</th>
+                    <th class="px-2 py-2 text-right">Strip Price</th>
+                    <th class="px-2 py-2 text-right">Unit Price</th>
+                    <th class="px-2 py-2 text-center">Strip Size</th>
+                    <th class="px-2 py-2 text-center">Stock</th>
+                    <th class="px-2 py-2 text-center">Status</th>
+                    <th class="px-2 py-2 text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="medicines-table-body" class="divide-y divide-slate-200 text-slate-700 font-medium">
@@ -219,7 +219,7 @@
         </div>
 
         <!-- SECTION 2: VENDOR PURCHASES MANAGEMENT -->
-        <div id="med-section-purchases" class="tab-section hidden space-y-4">
+        <div id="med-section-purchases" class="tab-section hidden flex-grow overflow-y-auto space-y-4 pb-10">
           <div class="table-card bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
             <div class="table-header-bar p-5 border-b border-slate-200/80 flex flex-wrap justify-between items-center gap-4 bg-slate-50/50">
               <div>
@@ -269,7 +269,7 @@
         </div>
 
         <!-- SECTION 3: PURCHASE RETURNS -->
-        <div id="med-section-returns" class="tab-section hidden space-y-4">
+        <div id="med-section-returns" class="tab-section hidden flex-grow overflow-y-auto space-y-4 pb-10">
           <div class="table-card bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
             <div class="table-header-bar p-5 border-b border-slate-200/80 flex flex-wrap justify-between items-center gap-4 bg-slate-50/50">
               <div>
@@ -315,7 +315,7 @@
         </div>
 
         <!-- SECTION 4: EXPIRED MEDICINES & DISPOSAL DETAILS -->
-        <div id="med-section-expired" class="tab-section hidden space-y-5">
+        <div id="med-section-expired" class="tab-section hidden flex-grow overflow-y-auto space-y-5 pb-10">
           
           <!-- Metrics Cards for Expired Stock -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">

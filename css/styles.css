@@ -56,21 +56,23 @@
 
 /* Fast Scrollbar Rendering */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.03);
+  background: #f8fafc; /* White/very light grey track */
+  border-left: 1px solid #e2e8f0;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.5);
-  border-radius: 4px;
+  background: #cbd5e1; /* Solid visible grey/white-ish */
+  border-radius: 6px;
+  border: 2px solid #f8fafc; /* Padding around thumb */
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(2, 132, 199, 0.8);
+  background: #94a3b8; /* Darker on hover for visibility */
 }
 
 * {

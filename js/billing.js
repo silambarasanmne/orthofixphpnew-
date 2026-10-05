@@ -355,8 +355,8 @@ const Billing = {
               <span>Exp: <strong>${m.expiry_date}</strong></span>
             </div>
             <div class="med-meta" style="margin-top: 0.5rem;">
-              <span class="med-price">${UI.formatCurrency(m.selling_price)} <small style="font-size: 0.7rem; font-weight: normal; color: #64748b;">(₹${((m.selling_price || 0) / (m.units_per_strip || 10)).toFixed(2)}/tab)</small></span>
-              <span style="font-size: 0.8rem; color: #64748b;">Stock: <strong>${m.current_stock} tabs</strong></span>
+              <span class="med-price">${UI.formatCurrency(m.selling_price)} <small style="font-size: 0.7rem; font-weight: normal; color: #64748b;">(₹${((m.selling_price || 0) / (m.units_per_strip || 10)).toFixed(2)}/${m.category ? m.category : 'unit'})</small></span>
+              <span style="font-size: 0.8rem; color: #64748b;">Stock: <strong>${m.current_stock} ${m.category ? m.category : 'units'}</strong></span>
             </div>
           </div>
         </div>
@@ -496,7 +496,7 @@ const Billing = {
           </td>
 
           <td class="p-2 text-right align-middle font-bold text-xs text-slate-800">
-            ₹${Number(item.unit_price).toFixed(2)}/tab
+            ₹${Number(item.unit_price).toFixed(2)}/${item.medicine.category ? item.medicine.category : 'unit'}
             <small class="text-slate-500 font-normal text-[10px] block">Strip: ₹${item.medicine.selling_price}</small>
           </td>
 

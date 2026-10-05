@@ -691,6 +691,10 @@ router.delete('/:id', authenticateToken, requireAdmin, (req, res) => {
     // Clean up dependent audit/sales references to avoid Foreign Key constraint failures
     db.prepare('DELETE FROM stock_movements WHERE medicine_id = ?').run(medId);
     db.prepare('DELETE FROM sale_items WHERE medicine_id = ?').run(medId);
+    db.prepare('DELETE FROM vendor_purchase_items WHERE medicine_id = ?').run(medId);
+    db.prepare('DELETE FROM purchase_return_items WHERE medicine_id = ?').run(medId);
+    db.prepare('DELETE FROM expired_disposals WHERE medicine_id = ?').run(medId);
+    db.prepare('DELETE FROM prescription_items WHERE medicine_id = ?').run(medId);
 
     // Delete medicine from medicines table
     db.prepare('DELETE FROM medicines WHERE id = ?').run(medId);

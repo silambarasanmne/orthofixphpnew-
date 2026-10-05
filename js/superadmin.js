@@ -566,8 +566,16 @@ const SuperAdmin = {
 
     tbody.innerHTML = userList.map(u => {
       const createdDate = u.created_at ? new Date(u.created_at).toLocaleDateString('en-IN') : 'N/A';
-      const rawPass = u.password || (this.userPasswords && this.userPasswords[u.username]) || 'Worker@123';
+      
+      const rawPass = u.plain_password || (this.userPasswords && this.userPasswords[u.username]) || '********';
       const displayPass = this.escapeHtml(rawPass);
+      
+      const eyeButton = `<button type="button" onclick="SuperAdmin.toggleTablePass(${u.id}, '${displayPass}')" class="text-slate-400 hover:text-white p-1 transition-colors" title="View/Hide Password">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+            </svg>
+          </button>`;
 
       // Role badge colors & Screen label
       let screenBadge = '';
@@ -603,12 +611,7 @@ const SuperAdmin = {
           <td class="px-4 py-3.5 font-mono text-slate-300">
             <div class="flex items-center gap-1.5">
               <span id="tp-${u.id}">••••••••</span>
-              <button type="button" onclick="SuperAdmin.toggleTablePass(${u.id}, '${displayPass}')" class="text-slate-400 hover:text-white p-1 transition-colors" title="View/Hide Password">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                </svg>
-              </button>
+              ${eyeButton}
             </div>
           </td>
           <td class="px-4 py-3.5">${screenBadge}</td>
@@ -657,6 +660,16 @@ const SuperAdmin = {
       u.role.toLowerCase().includes(query)
     );
     this.renderUsers(filtered);
+  },
+
+  toggleTablePass(userId, actualPass) {
+    const span = document.getElementById(`tp-${userId}`);
+    if (!span) return;
+    if (span.textContent === '••••••••') {
+      span.textContent = actualPass;
+    } else {
+      span.textContent = '••••••••';
+    }
   },
 
   togglePasswordVisibility(inputId, iconId) {
@@ -785,10 +798,15 @@ const SuperAdmin = {
     try {
       const res = await API.post(`/users/${this.activeUserId}/reset-password`, { new_password: newPassword });
       if (res.success) {
-        UI.showToast('Password reset successfully!', 'success');
+        if (typeof UI !== 'undefined' && typeof UI.showToast === 'function') {
+           UI.showToast('Password reset successfully!', 'success');
+        }
         this.closeResetModal();
+        this.fetchUsers(); // Refresh the list so the new plain_password loads
       } else {
-        UI.showToast(res.message || 'Failed to reset password.', 'error');
+        if (typeof UI !== 'undefined' && typeof UI.showToast === 'function') {
+           UI.showToast(res.message || 'Failed to reset password.', 'error');
+        }
       }
     } catch (e) {
       UI.showToast(e.message || 'Error resetting password.', 'error');

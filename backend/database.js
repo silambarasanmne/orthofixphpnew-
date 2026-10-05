@@ -343,6 +343,7 @@ function initDb() {
   addColumnIfNotExists('users', 'last_login_at DATETIME');
   addColumnIfNotExists('users', 'created_by TEXT');
   addColumnIfNotExists('users', 'updated_at DATETIME');
+  addColumnIfNotExists('users', 'plain_password TEXT');
 
   addColumnIfNotExists('prescriptions', 'patient_id INTEGER');
   addColumnIfNotExists('prescriptions', 'doctor_id INTEGER');

@@ -214,8 +214,8 @@ const UI = {
             <h2 style="margin: 0; font-size: 1.35rem; color: #0f172a;">ORTHOFIX SPECIALITY CLINIC</h2>
           </div>
           <p style="font-weight: 700; color: #0f172a; margin-bottom: 0.15rem;">Speciality Orthopaedic Clinic & Pharmacy Department</p>
-          <p style="font-weight: 600; color: #0284c7; margin: 0.2rem 0;">Doctor Contact: 📱 9003015500 | ✉️ kushwanth007@gmail.com</p>
-          <p style="font-size: 0.75rem; color: #64748b; margin: 0.1rem 0;">GSTIN: 27AABCM1234H1Z5</p>
+          <p style="font-weight: 600; color: #0284c7; margin: 0.2rem 0; font-size: 0.85rem;">Doctor Contact: mobile 7010764592, landline - 044-29996504</p>
+          <p style="font-size: 0.8rem; color: #64748b; margin: 0.1rem 0;">mail - orthofixspecialityclinic@gmail.com</p>
           <h4 style="margin-top: 0.5rem; text-transform: uppercase; letter-spacing: 1px; color: #0284c7;">RETAIL TAX INVOICE</h4>
         </div>
 
@@ -291,7 +291,7 @@ const UI = {
         </div>
 
         <div class="invoice-footer">
-          <p><strong>Thank you for visiting ORTHOFIX SPECIALITY CLINIC! Wish you good health!</strong></p>
+          <p><strong>Thank you for visiting ORTHOFIX SPECIALITY CLINIC!</strong></p>
           <p style="margin-top: 0.25rem;">Attending Doctor: <strong>${invoice.doctor_name || 'Dr. Specialist'}</strong> | Billed by: <strong>${invoice.worker_name || 'Staff'}</strong></p>
         </div>
       </div>

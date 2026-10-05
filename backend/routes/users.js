@@ -19,7 +19,7 @@ const VALID_ROLES = [
 // GET /api/users - List all users (Admin only)
 router.get('/', authenticateToken, requireAdmin, (req, res) => {
   try {
-    const stmt = db.prepare('SELECT id, username, full_name, email, mobile_number, role, is_active, last_login_at, created_by, created_at, updated_at FROM users ORDER BY id ASC');
+    const stmt = db.prepare('SELECT id, username, full_name, email, mobile_number, role, is_active, plain_password, last_login_at, created_by, created_at, updated_at FROM users ORDER BY id ASC');
     const users = stmt.all();
     return res.json({ success: true, users });
   } catch (error) {
@@ -49,13 +49,14 @@ router.post('/', authenticateToken, requireAdmin, (req, res) => {
     const nowIso = new Date().toISOString();
 
     const insertStmt = db.prepare(`
-      INSERT INTO users (username, password, full_name, email, mobile_number, role, is_active, created_by, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
+      INSERT INTO users (username, password, plain_password, full_name, email, mobile_number, role, is_active, created_by, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
     `);
 
     const result = insertStmt.run(
       trimmedUsername,
       hashedPassword,
+      password,
       full_name.trim(),
       email ? email.trim() : '',
       mobile_number ? mobile_number.trim() : '',
@@ -160,7 +161,7 @@ router.post('/:id/reset-password', authenticateToken, requireAdmin, (req, res) =
     const hashedPassword = bcrypt.hashSync(new_password, salt);
     const nowIso = new Date().toISOString();
 
-    db.prepare('UPDATE users SET password = ?, updated_at = ? WHERE id = ?').run(hashedPassword, nowIso, userId);
+    db.prepare('UPDATE users SET password = ?, plain_password = ?, updated_at = ? WHERE id = ?').run(hashedPassword, new_password, nowIso, userId);
 
     logAudit(req, req.user, 'PASSWORD_RESET', 'USERS', 'User', userId, `Admin reset password for user '${existing ? existing.username : userId}'`);
 
